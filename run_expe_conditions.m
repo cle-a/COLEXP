@@ -41,8 +41,8 @@ finalchoice = struct();
 %% load / make sequences
 % Generate sequences information
 fprintf('Generating sequences for participant # %i...\n', subj)
-sqc = gen_sequences(subj, 64);
-%load('/Users/clemence/Dropbox/LNC/AGEXP/experiment/Data/S99/output99.mat', 'sqc');
+%sqc = gen_sequences(subj, 64);
+load('/Users/clemence/Dropbox/LNC/COLEXP/Data/S99/output99.mat', 'sqc');
 
 %% init PTB, set visual parameters & make textures:
 
@@ -145,12 +145,12 @@ progressON = true; % adding progress at each seq: "xx many percent of this bloc"
 scoreON = false; % adding score at each sequence
 forcepauseON = true; % forcing 30'' breaks
 labelsON = true;
-testingON = false;
+testingON = true;
 
 if testingON
     nseq = 5; % nseq = numel(sqc);
-    nsamples = 5;%sqc(iseq).nsamples;
-    nseqperblock = 16; %actually blocs can be either 8 or 16 seq long...
+    nsamples = 2;%sqc(iseq).nsamples;
+    nseqperblock = 2; %actually blocs can be either 8 or 16 seq long...
     forcepauseON = false; % forcing 30'' breaks
 else
     nseq = numel(sqc);
@@ -190,8 +190,8 @@ currentseqinblock = 0;
 for iseq = 1:nseq
 %%%
     if mod(iseq,5) == 0; fprintf('iseq # %d/%d...\n', iseq, nseq); end
-
-    % Get this sequence's data
+    
+    % Draw sequence instructions
     condition    = sqc(iseq).condition;
     targetsymbol = sqc(iseq).targetsymbol;
     othersymbol  = sqc(iseq).othersymbol;
@@ -199,11 +199,9 @@ for iseq = 1:nseq
     if      targetcolor == 1; colorstr = 'bleu';  
     elseif  targetcolor == 2; colorstr = 'rouge';   
     end
-    
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    % Draw sequence instructions
     sidea  = randi(2,1); % get random sides of symbols for the instructions
     sideb  = 3 - sidea;
+    
     if condition == 1
         line = sprintf('Voici les symboles, essayez de tirer du %s !', colorstr);
     elseif condition == 2
@@ -237,8 +235,9 @@ for iseq = 1:nseq
     
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%loop over trials
-    nsamples = sqc(iseq).nsamples;
-    %countingresponses = NaN(1,nsamples);
+    if testingON == false
+        nsamples = sqc(iseq).nsamples;
+    end
     for isample = 1:nsamples
         
         % Init resp var
@@ -291,9 +290,6 @@ for iseq = 1:nseq
         WaitSecs(0.5);
         
         % Store results:
-%         if response == targetside; countingresponses(isample) = 1;
-%         elseif response == otherside; countingresponses(isample) = 2;
-%         end
         sampling(currenttrial).subj = subj;
         sampling(currenttrial).condition = condition;
         sampling(currenttrial).mirroring = sqc(iseq).mirroring;
@@ -316,14 +312,16 @@ for iseq = 1:nseq
     % Draw final probe while no answer yet:
     
     % Get sides of color buttons for final probe :
-    bluebuttonside = sqc(iseq).bluebuttonside;
-    redbuttonside  = 3-bluebuttonside;
     if targetcolor == 1%blue
-        goodanswer = bluebuttonside;
-        wronganswer = redbuttonside;
+        goodanswer = sqc(iseq).probeside;
+        wronganswer = 3-goodanswer;
+        bluebuttonside = goodanswer;
+        redbuttonside = 3-bluebuttonside;
     elseif targetcolor == 2%red
-        goodanswer = redbuttonside;
-        wronganswer = bluebuttonside;
+        goodanswer = sqc(iseq).probeside;
+        wronganswer = 3-goodanswer;
+        bluebuttonside = wronganswer;
+        redbuttonside = 3-bluebuttonside;
     end
     
     % Depending on condition, draw final probe:
@@ -404,8 +402,9 @@ for iseq = 1:nseq
     finalchoice(iseq).mirroring = sqc(iseq).mirroring;
     finalchoice(iseq).sequencenb = iseq;
     finalchoice(iseq).nsamples = sqc(iseq).nsamples;
-    finalchoice(iseq).symbolpair = sqc(iseq).symbolpair;
+    finalchoice(iseq).coloragency = sqc(iseq).agtcondition;
     finalchoice(iseq).targetsymbol = targetsymbol;
+    finalchoice(iseq).coloragency  = goodanswer;
     finalchoice(iseq).targetcolor = targetcolor;
     finalchoice(iseq).goodanswerside  = goodanswer;
     finalchoice(iseq).finalresponse    = respprobe;
@@ -422,8 +421,6 @@ for iseq = 1:nseq
             DrawFormattedText(window, line1, 'center', screenYpixels * 0.25, black);
             line2 = sprintf('PRENEZ UNE PAUSE !\nAu moins 30 secondes ; vous pouvez prendre plus.\n%d', presSecs(sec));
             DrawFormattedText(window, line2, 'center', screenYpixels * 0.50, black);
-%             line3 = num2str(presSecs(sec));
-%             DrawFormattedText(window, line3, 'center', screenYpixels * 0.50, black);
             Screen('Flip', window);
             WaitSecs(1);
         end
