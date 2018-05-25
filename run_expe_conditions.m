@@ -41,8 +41,8 @@ finalchoice = struct();
 %% load / make sequences
 % Generate sequences information
 fprintf('Generating sequences for participant # %i...\n', subj)
-%sqc = gen_sequences(subj, 64);
-load('/Users/clemence/Dropbox/LNC/COLEXP/Data/S99/output99.mat', 'sqc');
+sqc = gen_sequences(subj, 32);
+%load('/Users/clemence/Dropbox/LNC/COLEXP/Data/S99/testsqc.mat', 'sqc');
 
 %% init PTB, set visual parameters & make textures:
 
@@ -145,12 +145,12 @@ progressON = true; % adding progress at each seq: "xx many percent of this bloc"
 scoreON = false; % adding score at each sequence
 forcepauseON = true; % forcing 30'' breaks
 labelsON = true;
-testingON = true;
+testingON = false;
 
 if testingON
-    nseq = 5; % nseq = numel(sqc);
-    nsamples = 2;%sqc(iseq).nsamples;
-    nseqperblock = 2; %actually blocs can be either 8 or 16 seq long...
+    nseq = 7; % nseq = numel(sqc);
+    %nsamples = ;%sqc(iseq).nsamples;
+    nseqperblock = 3; %actually blocs can be either 8 or 16 seq long...
     forcepauseON = false; % forcing 30'' breaks
 else
     nseq = numel(sqc);
@@ -237,15 +237,21 @@ for iseq = 1:nseq
 %%%loop over trials
     if testingON == false
         nsamples = sqc(iseq).nsamples;
-    end
+    end    
+    seqpoints = NaN(1,nsamples);
     for isample = 1:nsamples
         
         % Init resp var
          awaitingresp = true;
 
-        % Check if abort key is pressed
-        if CheckKeyPress(escapeKey); sca; break
-        end
+         % Check if abort key is pressed
+         if CheckKeyPress(escapeKey)
+             Priority(0);
+             FlushEvents;
+             ListenChar(0);
+             ShowCursor;
+             break
+         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % Draw sampling alternatives:
@@ -262,9 +268,9 @@ for iseq = 1:nseq
         
         % Get sampling choice:
         while awaitingresp == 1 
-            [keyIsDown,secs,k] = KbCheck([],scanlist);
-            if keyIsDown & find(k==1) == respKey(1) | find(k==1) == respKey(2)
-                response = find(respKey == (find(k==1)));
+            [keyIsDown,secs,keylist] = KbCheck([],scanlist);
+            if keyIsDown &  (keylist(respKey(1)) == 1 |  keylist(respKey(2)) == 1 )
+                response = find(respKey == (find(keylist==1)));
                 rt  = secs - vbl;
                 awaitingresp = false;
             end
@@ -272,6 +278,7 @@ for iseq = 1:nseq
         
         % Draw color feedback for 0.5 secs
         samplecolor = sqc(iseq).rgb(isample,:,response);
+        seqpoints(isample) = sqc(iseq).colorslin(response,isample);
         if response == targetside
             Screen('DrawDots', window, [xCenter yCenter], 15 , black, [0 0], 2);
             Screen('DrawTexture', window, shape_tex(1,targetsymbol), [], positions(targetside,:), 0, [], [], [0,0,0]);
@@ -346,9 +353,9 @@ for iseq = 1:nseq
     % Get final response & and wait 0.5secs:
     awaitingfinalresp = 1;
     while awaitingfinalresp
-        [keyIsDown,secs,k] = KbCheck([],scanlist);
-        if keyIsDown & find(k==1) == respKey(1) | find(k==1) == respKey(2)
-            respprobe = find(respKey == (find(k==1)));
+        [keyIsDown,secs,keylist] = KbCheck([],scanlist);
+        if keyIsDown &  (keylist(respKey(1)) == 1 |  keylist(respKey(2)) == 1 )
+            respprobe = find(respKey == (find(keylist==1)));
             rtprobe  = secs - vbl;
             awaitingfinalresp = false;
         end
