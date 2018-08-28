@@ -1,5 +1,5 @@
 %% run experiment
-% NB: native KB keys are not inhibited: don't press any key!
+% NB: native KB keys are not inhibited: don't press a | p keys!
 
 % iblock = block idx in nb of blocks
 % iseq = seq idx in nb of seq in this block
@@ -13,9 +13,6 @@ close all;
 clearvars;
 
 addpath ./Toolboxes/IO % Valentin's toolbox in Experiment's path
-%addpath C:/Toolboxes/Psychtoolbox/ % PTB path specific to laptop
-%addpath('/Applications/Psychtoolbox/PsychHardware/EyelinkToolbox/'); % PTB toolbox to interface w Eyelink
-%addpath(genpath('/Applications/Eyelink/'));
 
 %% Init subj: get nb, create folder, init resp matrix, load or generate sequences: 
 
@@ -108,20 +105,6 @@ end
     PsychImaging('AddTask','General','UseFastOffscreenWindows');
     PsychImaging('AddTask','General','NormalizedHighresColorRange');
     video.res = Screen('Resolution',video.screen);
-    
-%     % set res manually..?
-%     res  = []; % screen resolution, [] = full screen
-%     fps  = []; % screen refresh rate
-%     if ~isempty(res) && ~isempty(fps) % set screen res and refresh rate
-%     r = Screen('Resolutions',screennb);
-%     i = find([r.width] == res(1) & [r.height] == res(2));
-%     if isempty(i) || ~any([r(i).hz] == fps)
-%         error('Cannot set screen to %d x %d at %d Hz.',res(1),res(2),fps);
-%     end
-%     Screen('Resolution',video.screen, res(1), res(2), fps);
-%     end
-    
-    fprintf('before openwindow\n\n')
     [video.window, video.windowRect] = PsychImaging('OpenWindow',video.screen,video.lbgd);
     fprintf('passed OpenWindow!\n\n')
 
@@ -211,14 +194,10 @@ if video.eyeON
     % Initialize Eyelink computer:
     status = Eyelink('Initialize', 'PsychEyelinkDispatchCallback'); % ZERO IF OK
     if status ~= 0; error('could not initialize eye-tracker connection!'); end
-    %status = Eyelink('InitializeDummy');
     [~,ev] = Eyelink('GetTrackerVersion');
     connected = Eyelink('IsConnected'); %1=ok, 2=broadcast, -1=dummy, 0=none
     fprintf('Connection to %s eye-tracker initialized = %d.\n',ev, connected);
-    
-    % INIT PTB EL
-    el = EyelinkInitDefaults(video.window);
-    %el.devicenumber = []; %see KbCheck for details of this value
+    el = EyelinkInitDefaults(video.window); % initialize a PTB el structure
     
     % UPDATE SET OPTIONS SCREEN:
         % calibration & validation options:
@@ -232,28 +211,13 @@ if video.eyeON
         % tracking options:
     %Eyelink('Command', 'search_limits = YES');
     %Eyelink('Command', 'move_limits = YES');
-    %Eyelink('Command', 'mouse_simulation = YES');
-    Eyelink('Command', 'pupil_size_diameter = NO');
+    if video.mouseON; Eyelink('Command', 'aux_mouse_simulation = YES');
+    elseif video.mouseON == false; Eyelink('Command', 'aux_mouse_simulation = NO');
+    end
+    Eyelink('Command', 'pupil_size_diameter = YES'); % valentin does diameter
         
         % events & data processing options:    - this is the cognitive configuration
     Eyelink('Command','select_parser_configuration = 0'); %this is the cognitive configuration
-    Eyelink('Command','recording_parse_type = GAZE');
-    Eyelink('Command','saccade_velocity_threshold = 30');    
-    Eyelink('Command','saccade_acceleration_threshold = 8000');    
-    Eyelink('Command','saccade_motion_threshold = 0.1'); 
-    Eyelink('Command','saccade_pursuit_fixup = 60');    
-    Eyelink('Command','fixation_update_interval = 0');  
-    %Eyelink('Command', 'saccade_sensitivity = NORMAL');
-    %Eyelink('Command', 'file_sample_filter = EXTRA');
-    %Eyelink('Command','Analog_filter = STD');
-    
-        % analog output options:
-    %Eyelink('Command', 'analog_output = 0');
-    
-        % File contents:   - defaults from manual adapted to my task:
-    Eyelink('Command','file_event_data = GAZE, GAZERES, AREA, HREF, VELOCITY');
-    Eyelink('Command','file_event_filter = LEFT, RIGHT, FIXATION, SACCADE, BLINK, MESSAGE');
-    Eyelink('Command','file_sample_data = LEFT,RIGHT,GAZE,GAZERES,AREA,STATUS');       
     
         % UPDATE CAMERA SETUP SCREEN:
         % Tracking mode:
@@ -296,12 +260,14 @@ if video.eyeON
     Eyelink('Command','validation_samples = 5');
     Eyelink('Command','validation_sequence = 0,1,2,3,4,5');
     Eyelink('Command','validation_targets = %d,%d %d,%d %d,%d %d,%d %d,%d',pnt{:});
-    
     Eyelink('Command','calibration_type = HV5'); % HV5 or HV9
-    
     el.displayCalResults = 1;
     EyelinkUpdateDefaults(el); % pass the values back to the Eyelink
     
+    % File contents:   - defaults from manual adapted to my task:
+    Eyelink('Command','file_event_data = GAZE, GAZERES, AREA, HREF, VELOCITY');
+    Eyelink('Command','file_event_filter = LEFT, RIGHT, FIXATION, SACCADE, BLINK, MESSAGE');
+    Eyelink('Command','file_sample_data = LEFT,RIGHT,GAZE,GAZERES,AREA,STATUS');  
 end
 
 %% TRY/CATCH/END - start display
@@ -354,6 +320,7 @@ try
             k = RestrictKeysForKbCheck(allKeys);
             
             fprintf('Calibrate eyetracker for block %d\n', iblock);
+            
             %%% calibrate:
             calibration = EyelinkDoTrackerSetup(el, el.ENTER_KEY); %el.ENTER_KEY shows the eye image on display screen
             [~, calmessage] = Eyelink('CalMessage');
